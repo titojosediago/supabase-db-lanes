@@ -1,0 +1,132 @@
+# name: Supabase Migrate on PR Merge
+
+# on:
+#   pull_request:
+#     types: [closed]
+#     branches:
+#       - main
+#       - pre-production
+#       - t1-staging
+#       - t1-testing
+#       - t1-develop
+#       - t2-staging
+#       - t2-testing
+#       - t2-develop
+#       - t3-staging
+#       - t3-testing
+#       - t3-develop
+#   push:
+#     branches:
+#       - main
+#       - pre-production
+#       - t1-staging
+#       - t1-testing
+#       - t1-develop
+#       - t2-staging
+#       - t2-testing
+#       - t2-develop
+#       - t3-staging
+#       - t3-testing
+#       - t3-develop
+
+# permissions:
+#   contents: read
+
+# concurrency:
+#   group: supabase-migrate-${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref || github.ref_name }}
+#   cancel-in-progress: false
+
+# jobs:
+#   migrate:
+#     if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
+#     runs-on: ubuntu-latest
+
+#     env:
+#       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+#       SB_REF_PRODUCTION: ${{ secrets.SB_REF_PRODUCTION }}
+#       SB_REF_PREPRODUCTION: ${{ secrets.SB_REF_PREPRODUCTION }}
+
+#       SB_REF_T1_STAGING: ${{ secrets.SB_REF_T1_STAGING }}
+#       SB_REF_T1_TESTING: ${{ secrets.SB_REF_T1_TESTING }}
+#       SB_REF_T1_DEVELOP: ${{ secrets.SB_REF_T1_DEVELOP }}
+
+#       SB_REF_T2_STAGING: ${{ secrets.SB_REF_T2_STAGING }}
+#       SB_REF_T2_TESTING: ${{ secrets.SB_REF_T2_TESTING }}
+#       SB_REF_T2_DEVELOP: ${{ secrets.SB_REF_T2_DEVELOP }}
+
+#       SB_REF_T3_STAGING: ${{ secrets.SB_REF_T3_STAGING }}
+#       SB_REF_T3_TESTING: ${{ secrets.SB_REF_T3_TESTING }}
+#       SB_REF_T3_DEVELOP: ${{ secrets.SB_REF_T3_DEVELOP }}
+
+#     steps:
+#       - name: Checkout
+#         uses: actions/checkout@v4
+
+#       - name: Determine target branch (PR base or push ref)
+#         id: target
+#         run: |
+#           if [ "${{ github.event_name }}" = "pull_request" ]; then
+#             echo "TARGET_BRANCH=${{ github.event.pull_request.base.ref }}" >> $GITHUB_ENV
+#           else
+#             echo "TARGET_BRANCH=${{ github.ref_name }}" >> $GITHUB_ENV
+#           fi
+#           echo "Target branch: $TARGET_BRANCH"
+
+#       - name: Map branch to Supabase project ref
+#         id: map
+#         run: |
+#           case "$TARGET_BRANCH" in
+#             main)
+#               echo "SUPABASE_PROJECT_REF=${SB_REF_PRODUCTION}" >> $GITHUB_ENV
+#               ;;
+#             pre-production)
+#               echo "SUPABASE_PROJECT_REF=${SB_REF_PREPRODUCTION}" >> $GITHUB_ENV
+#               ;;
+#             t1-staging)
+#               echo "SUPABASE_PROJECT_REF=${SB_REF_T1_STAGING}" >> $GITHUB_ENV
+#               ;;
+#             t1-testing)
+#               echo "SUPABASE_PROJECT_REF=${SB_REF_T1_TESTING}" >> $GITHUB_ENV
+#               ;;
+#             t1-develop)
+#               echo "SUPABASE_PROJECT_REF=${SB_REF_T1_DEVELOP}" >> $GITHUB_ENV
+#               ;;
+#             t2-staging)
+#               echo "SUPABASE_PROJECT_REF=${SB_REF_T2_STAGING}" >> $GITHUB_ENV
+#               ;;
+#             t2-testing)
+#               echo "SUPABASE_PROJECT_REF=${SB_REF_T2_TESTING}" >> $GITHUB_ENV
+#               ;;
+#             t2-develop)
+#               echo "SUPABASE_PROJECT_REF=${SB_REF_T2_DEVELOP}" >> $GITHUB_ENV
+#               ;;
+#             t3-staging)
+#               echo "SUPABASE_PROJECT_REF=${SB_REF_T3_STAGING}" >> $GITHUB_ENV
+#               ;;
+#             t3-testing)
+#               echo "SUPABASE_PROJECT_REF=${SB_REF_T3_TESTING}" >> $GITHUB_ENV
+#               ;;
+#             t3-develop)
+#               echo "SUPABASE_PROJECT_REF=${SB_REF_T3_DEVELOP}" >> $GITHUB_ENV
+#               ;;
+#             *)
+#               echo "ERROR: No Supabase project mapping for branch '$TARGET_BRANCH'"
+#               exit 1
+#               ;;
+#           esac
+
+#       - name: Install Supabase CLI
+#         uses: supabase/setup-cli@v1
+#         with:
+#           version: latest
+
+#       - name: Authenticate Supabase CLI
+#         run: supabase login --token "${SUPABASE_ACCESS_TOKEN}"
+
+#       - name: Push migrations to target project
+#         working-directory: supabase
+#         run: |
+#           supabase --version
+#           supabase db push --project-ref "$SUPABASE_PROJECT_REF" --non-interactive
+
