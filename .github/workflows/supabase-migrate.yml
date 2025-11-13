@@ -79,36 +79,47 @@ jobs:
           case "$TARGET_BRANCH" in
             main)
               echo "SUPABASE_PROJECT_REF=${SB_REF_PRODUCTION}" >> $GITHUB_ENV
+              echo "SUPABASE_DB_PASSWORD=${{ secrets.SB_DB_PASSWORD_PRODUCTION }}" >> $GITHUB_ENV
               ;;
             pre-production)
               echo "SUPABASE_PROJECT_REF=${SB_REF_PREPRODUCTION}" >> $GITHUB_ENV
+              echo "SUPABASE_DB_PASSWORD=${{ secrets.SB_DB_PASSWORD_PREPRODUCTION }}" >> $GITHUB_ENV
               ;;
             t1-staging)
               echo "SUPABASE_PROJECT_REF=${SB_REF_T1_STAGING}" >> $GITHUB_ENV
+              echo "SUPABASE_DB_PASSWORD=${{ secrets.SB_DB_PASSWORD_T1_STAGING }}" >> $GITHUB_ENV
               ;;
             t1-testing)
               echo "SUPABASE_PROJECT_REF=${SB_REF_T1_TESTING}" >> $GITHUB_ENV
+              echo "SUPABASE_DB_PASSWORD=${{ secrets.SB_DB_PASSWORD_T1_TESTING }}" >> $GITHUB_ENV
               ;;
             t1-develop)
               echo "SUPABASE_PROJECT_REF=${SB_REF_T1_DEVELOP}" >> $GITHUB_ENV
+              echo "SUPABASE_DB_PASSWORD=${{ secrets.SB_DB_PASSWORD_T1_DEVELOP }}" >> $GITHUB_ENV
               ;;
             # t2-staging)
             #   echo "SUPABASE_PROJECT_REF=${SB_REF_T2_STAGING}" >> $GITHUB_ENV
+            #   echo "SUPABASE_DB_PASSWORD=${{ secrets.SB_DB_PASSWORD_T2_STAGING }}" >> $GITHUB_ENV
             #   ;;
             # t2-testing)
             #   echo "SUPABASE_PROJECT_REF=${SB_REF_T2_TESTING}" >> $GITHUB_ENV
+            #   echo "SUPABASE_DB_PASSWORD=${{ secrets.SB_DB_PASSWORD_T2_TESTING }}" >> $GITHUB_ENV
             #   ;;
             # t2-develop)
             #   echo "SUPABASE_PROJECT_REF=${SB_REF_T2_DEVELOP}" >> $GITHUB_ENV
+            #   echo "SUPABASE_DB_PASSWORD=${{ secrets.SB_DB_PASSWORD_T2_DEVELOP }}" >> $GITHUB_ENV
             #   ;;
             # t3-staging)
             #   echo "SUPABASE_PROJECT_REF=${SB_REF_T3_STAGING}" >> $GITHUB_ENV
+            #   echo "SUPABASE_DB_PASSWORD=${{ secrets.SB_DB_PASSWORD_T3_STAGING }}" >> $GITHUB_ENV
             #   ;;
             # t3-testing)
             #   echo "SUPABASE_PROJECT_REF=${SB_REF_T3_TESTING}" >> $GITHUB_ENV
+            #   echo "SUPABASE_DB_PASSWORD=${{ secrets.SB_DB_PASSWORD_T3_TESTING }}" >> $GITHUB_ENV
             #   ;;
             # t3-develop)
             #   echo "SUPABASE_PROJECT_REF=${SB_REF_T3_DEVELOP}" >> $GITHUB_ENV
+            #   echo "SUPABASE_DB_PASSWORD=${{ secrets.SB_DB_PASSWORD_T3_DEVELOP }}" >> $GITHUB_ENV
             #   ;;
             *)
               echo "ERROR: No Supabase project mapping for branch '$TARGET_BRANCH'"
@@ -124,9 +135,15 @@ jobs:
       - name: Authenticate Supabase CLI
         run: supabase login --token "${SUPABASE_ACCESS_TOKEN}"
 
+      - name: Link to target Supabase project
+        working-directory: supabase
+        run: |
+          # Link ensures db commands target the correct remote project
+          supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+
       - name: Push migrations to target project
         working-directory: supabase
         run: |
           supabase --version
-          supabase db push --project-ref "$SUPABASE_PROJECT_REF" --non-interactive
+          supabase db push
 
