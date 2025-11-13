@@ -1,6 +1,6 @@
--- Create table only if it doesn't exist
 DO $$
 BEGIN
+  -- Create table if it doesn't exist
   IF NOT EXISTS (
     SELECT FROM pg_tables
     WHERE schemaname = 'public'
@@ -14,22 +14,24 @@ BEGIN
       updated_at timestamptz DEFAULT now()
     );
   END IF;
-END $$;
 
--- Optional: add a trigger to update "updated_at" on modification
-DO $$
-BEGIN
+  -- Create trigger function if it doesn't exist
   IF NOT EXISTS (
-    SELECT 1 FROM pg_trigger WHERE tgname = 'team_sports_update_timestamp'
+    SELECT 1 FROM pg_proc WHERE proname = 'update_team_sports_timestamp'
   ) THEN
     CREATE OR REPLACE FUNCTION public.update_team_sports_timestamp()
-    RETURNS trigger AS $$
+    RETURNS trigger AS $fn$
     BEGIN
       NEW.updated_at = now();
       RETURN NEW;
     END;
-    $$ LANGUAGE plpgsql;
+    $fn$ LANGUAGE plpgsql;
+  END IF;
 
+  -- Create trigger if it doesn't exist
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_trigger WHERE tgname = 'team_sports_update_timestamp'
+  ) THEN
     CREATE TRIGGER team_sports_update_timestamp
     BEFORE UPDATE ON public.team_sports
     FOR EACH ROW
