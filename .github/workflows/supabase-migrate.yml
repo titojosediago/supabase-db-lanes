@@ -4,20 +4,6 @@ on:
   pull_request:
     types: [closed]
     branches:
-      - main
-      - pre-production
-      - t1-staging
-      - t1-testing
-      - t1-develop
-      # - t2-staging
-      # - t2-testing
-      # - t2-develop
-      # - t3-staging
-      # - t3-testing
-      # - t3-develop
-  push:
-    branches:
-      - main
       - pre-production
       - t1-staging
       - t1-testing
@@ -38,7 +24,7 @@ concurrency:
 
 jobs:
   migrate:
-    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
+    if: github.event_name == 'pull_request' && github.event.pull_request.merged == true
     runs-on: ubuntu-latest
 
     env:
@@ -77,10 +63,6 @@ jobs:
         id: map
         run: |
           case "$TARGET_BRANCH" in
-            main)
-              echo "SUPABASE_PROJECT_REF=${SB_REF_PRODUCTION}" >> $GITHUB_ENV
-              echo "SUPABASE_DB_PASSWORD=${{ secrets.SB_DB_PASSWORD_PRODUCTION }}" >> $GITHUB_ENV
-              ;;
             pre-production)
               echo "SUPABASE_PROJECT_REF=${SB_REF_PREPRODUCTION}" >> $GITHUB_ENV
               echo "SUPABASE_DB_PASSWORD=${{ secrets.SB_DB_PASSWORD_PREPRODUCTION }}" >> $GITHUB_ENV
