@@ -8,12 +8,12 @@ on:
       - t1-staging
       - t1-testing
       - t1-develop
-      # - t2-staging
-      # - t2-testing
-      # - t2-develop
-      # - t3-staging
-      # - t3-testing
-      # - t3-develop
+      - t2-staging
+      - t2-testing
+      - t2-develop
+      - t3-staging
+      - t3-testing
+      - t3-develop
 
 permissions:
   contents: read
@@ -37,13 +37,13 @@ jobs:
       SB_REF_T1_TESTING: ${{ secrets.SB_REF_T1_TESTING }}
       SB_REF_T1_DEVELOP: ${{ secrets.SB_REF_T1_DEVELOP }}
 
-      # SB_REF_T2_STAGING: ${{ secrets.SB_REF_T2_STAGING }}
-      # SB_REF_T2_TESTING: ${{ secrets.SB_REF_T2_TESTING }}
-      # SB_REF_T2_DEVELOP: ${{ secrets.SB_REF_T2_DEVELOP }}
+      SB_REF_T2_STAGING: ${{ secrets.SB_REF_T2_STAGING }}
+      SB_REF_T2_TESTING: ${{ secrets.SB_REF_T2_TESTING }}
+      SB_REF_T2_DEVELOP: ${{ secrets.SB_REF_T2_DEVELOP }}
 
-      # SB_REF_T3_STAGING: ${{ secrets.SB_REF_T3_STAGING }}
-      # SB_REF_T3_TESTING: ${{ secrets.SB_REF_T3_TESTING }}
-      # SB_REF_T3_DEVELOP: ${{ secrets.SB_REF_T3_DEVELOP }}
+      SB_REF_T3_STAGING: ${{ secrets.SB_REF_T3_STAGING }}
+      SB_REF_T3_TESTING: ${{ secrets.SB_REF_T3_TESTING }}
+      SB_REF_T3_DEVELOP: ${{ secrets.SB_REF_T3_DEVELOP }}
 
     steps:
       - name: Checkout
@@ -79,30 +79,30 @@ jobs:
               echo "SUPABASE_PROJECT_REF=${SB_REF_T1_DEVELOP}" >> $GITHUB_ENV
               echo "SUPABASE_DB_PASSWORD=${{ secrets.SB_DB_PASSWORD_T1_DEVELOP }}" >> $GITHUB_ENV
               ;;
-            # t2-staging)
-            #   echo "SUPABASE_PROJECT_REF=${SB_REF_T2_STAGING}" >> $GITHUB_ENV
-            #   echo "SUPABASE_DB_PASSWORD=${{ secrets.SB_DB_PASSWORD_T2_STAGING }}" >> $GITHUB_ENV
-            #   ;;
-            # t2-testing)
-            #   echo "SUPABASE_PROJECT_REF=${SB_REF_T2_TESTING}" >> $GITHUB_ENV
-            #   echo "SUPABASE_DB_PASSWORD=${{ secrets.SB_DB_PASSWORD_T2_TESTING }}" >> $GITHUB_ENV
-            #   ;;
-            # t2-develop)
-            #   echo "SUPABASE_PROJECT_REF=${SB_REF_T2_DEVELOP}" >> $GITHUB_ENV
-            #   echo "SUPABASE_DB_PASSWORD=${{ secrets.SB_DB_PASSWORD_T2_DEVELOP }}" >> $GITHUB_ENV
-            #   ;;
-            # t3-staging)
-            #   echo "SUPABASE_PROJECT_REF=${SB_REF_T3_STAGING}" >> $GITHUB_ENV
-            #   echo "SUPABASE_DB_PASSWORD=${{ secrets.SB_DB_PASSWORD_T3_STAGING }}" >> $GITHUB_ENV
-            #   ;;
-            # t3-testing)
-            #   echo "SUPABASE_PROJECT_REF=${SB_REF_T3_TESTING}" >> $GITHUB_ENV
-            #   echo "SUPABASE_DB_PASSWORD=${{ secrets.SB_DB_PASSWORD_T3_TESTING }}" >> $GITHUB_ENV
-            #   ;;
-            # t3-develop)
-            #   echo "SUPABASE_PROJECT_REF=${SB_REF_T3_DEVELOP}" >> $GITHUB_ENV
-            #   echo "SUPABASE_DB_PASSWORD=${{ secrets.SB_DB_PASSWORD_T3_DEVELOP }}" >> $GITHUB_ENV
-            #   ;;
+            t2-staging)
+              echo "SUPABASE_PROJECT_REF=${SB_REF_T2_STAGING}" >> $GITHUB_ENV
+              echo "SUPABASE_DB_PASSWORD=${{ secrets.SB_DB_PASSWORD_T2_STAGING }}" >> $GITHUB_ENV
+              ;;
+            t2-testing)
+              echo "SUPABASE_PROJECT_REF=${SB_REF_T2_TESTING}" >> $GITHUB_ENV
+              echo "SUPABASE_DB_PASSWORD=${{ secrets.SB_DB_PASSWORD_T2_TESTING }}" >> $GITHUB_ENV
+              ;;
+            t2-develop)
+              echo "SUPABASE_PROJECT_REF=${SB_REF_T2_DEVELOP}" >> $GITHUB_ENV
+              echo "SUPABASE_DB_PASSWORD=${{ secrets.SB_DB_PASSWORD_T2_DEVELOP }}" >> $GITHUB_ENV
+              ;;
+            t3-staging)
+              echo "SUPABASE_PROJECT_REF=${SB_REF_T3_STAGING}" >> $GITHUB_ENV
+              echo "SUPABASE_DB_PASSWORD=${{ secrets.SB_DB_PASSWORD_T3_STAGING }}" >> $GITHUB_ENV
+              ;;
+            t3-testing)
+              echo "SUPABASE_PROJECT_REF=${SB_REF_T3_TESTING}" >> $GITHUB_ENV
+              echo "SUPABASE_DB_PASSWORD=${{ secrets.SB_DB_PASSWORD_T3_TESTING }}" >> $GITHUB_ENV
+              ;;
+            t3-develop)
+              echo "SUPABASE_PROJECT_REF=${SB_REF_T3_DEVELOP}" >> $GITHUB_ENV
+              echo "SUPABASE_DB_PASSWORD=${{ secrets.SB_DB_PASSWORD_T3_DEVELOP }}" >> $GITHUB_ENV
+              ;;
             *)
               echo "ERROR: No Supabase project mapping for branch '$TARGET_BRANCH'"
               exit 1
