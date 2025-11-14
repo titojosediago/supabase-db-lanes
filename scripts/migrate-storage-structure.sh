@@ -15,6 +15,9 @@ fi
 : "${TARGET_SUPABASE_URL:=}"
 : "${TARGET_SERVICE_ROLE:=}"
 : "${STORAGE_BUCKETS:=}"        # comma-separated list; empty => all
+: "${INCLUDE_POLICIES:=false}"  # optionally copy storage.objects policies from source DB to target DB
+: "${SOURCE_DB_URL:=}"
+: "${TARGET_DB_URL:=}"
 STORAGE_FOLDERS_ONLY="true"     # structure only
 DRY_RUN="false"
 YES_FLAG="false"
@@ -29,6 +32,9 @@ Options:
   --target-supabase-url=U  Target project URL
   --target-service-role=K  Target service_role key
   --storage-buckets=LIST   Comma-separated bucket names to include (default: all)
+  --include-policies       Also copy RLS policies on storage.objects from source DB to target DB
+  --source-db-url=URL      Source Postgres URL (required if --include-policies)
+  --target-db-url=URL      Target Postgres URL (required if --include-policies)
   --dry-run                Show actions without executing
   --yes                    Skip confirmation prompts
   -h, --help               Show this help
@@ -44,6 +50,9 @@ for arg in "$@"; do
     --target-supabase-url=*) TARGET_SUPABASE_URL="${arg#*=}" ;;
     --target-service-role=*) TARGET_SERVICE_ROLE="${arg#*=}" ;;
     --storage-buckets=*) STORAGE_BUCKETS="${arg#*=}" ;;
+    --include-policies) INCLUDE_POLICIES="true" ;;
+    --source-db-url=*) SOURCE_DB_URL="${arg#*=}" ;;
+    --target-db-url=*) TARGET_DB_URL="${arg#*=}" ;;
     --dry-run) DRY_RUN="true" ;;
     --yes) YES_FLAG="true" ;;
     -h|--help) usage; exit 0 ;;
@@ -69,6 +78,7 @@ echo "Target SB URL:    ${TARGET_SUPABASE_URL}"
 echo "Buckets:          ${STORAGE_BUCKETS:-<all>}"
 echo "Folders only:     ${STORAGE_FOLDERS_ONLY}"
 echo "Dry run:          ${DRY_RUN}"
+echo "Include policies: ${INCLUDE_POLICIES}"
 echo "-------------------------------------------"
 
 if [ "${YES_FLAG}" != "true" ]; then
@@ -168,6 +178,70 @@ echo "$BUCKETS_JSON" | jq -r '.[].name' | while read -r BUCKET; do
     OFFSET=$((OFFSET + LIMIT))
   done
 done
+
+# Optional: copy storage.objects policies via SQL
+if [ "${INCLUDE_POLICIES}" = "true" ]; then
+  if [ -z "${SOURCE_DB_URL}" ] || [ -z "${TARGET_DB_URL}" ]; then
+    echo "Warning: --include-policies requires --source-db-url and --target-db-url. Skipping policies."
+  else
+    command -v psql >/dev/null 2>&1 || { echo "psql not found in PATH; cannot copy policies."; echo "Done."; exit 0; }
+    POL_SQL_SRC="$(mktemp)"
+    cat > "$POL_SQL_SRC" <<'EOSQL'
+WITH roles_for_policy AS (
+  SELECT p.oid AS pol_oid,
+         COALESCE(
+           (SELECT string_agg(quote_ident(r.rolname), ', ')
+            FROM unnest(p.polroles) AS pr(oid)
+            JOIN pg_roles r ON r.oid = pr.oid),
+           'public'
+         ) AS rolelist
+  FROM pg_policy p
+)
+SELECT
+  'DROP POLICY IF EXISTS ' || quote_ident(pol.polname) || ' ON storage.objects; ' ||
+  'CREATE POLICY ' || quote_ident(pol.polname) || ' ON storage.objects ' ||
+  CASE pol.polpermissive WHEN TRUE THEN 'AS PERMISSIVE ' ELSE 'AS RESTRICTIVE ' END ||
+  'FOR ' ||
+    CASE pol.polcmd
+      WHEN 'r' THEN 'SELECT '
+      WHEN 'a' THEN 'INSERT '
+      WHEN 'w' THEN 'UPDATE '
+      WHEN 'd' THEN 'DELETE '
+      ELSE 'ALL '
+    END ||
+  'TO ' || rf.rolelist ||
+  COALESCE(' USING (' || pg_get_expr(pol.polqual, pol.polrelid) || ')', '') ||
+  COALESCE(' WITH CHECK (' || pg_get_expr(pol.polwithcheck, pol.polrelid) || ')', '') ||
+  ';'
+FROM pg_policy pol
+JOIN pg_class c ON c.oid = pol.polrelid
+JOIN pg_namespace n ON n.oid = c.relnamespace
+JOIN roles_for_policy rf ON rf.pol_oid = pol.oid
+WHERE n.nspname = 'storage' AND c.relname = 'objects'
+ORDER BY pol.polname;
+EOSQL
+
+    echo "Exporting storage.objects policies from source..."
+    POL_DDL_FILE="${STORAGE_TMP_DIR}/storage_policies.sql"
+    if [ "${DRY_RUN}" = "true" ]; then
+      echo "[DRY RUN] Would export policies from source DB and apply to target."
+    else
+      psql "$SOURCE_DB_URL" -At -f "$POL_SQL_SRC" > "$POL_DDL_FILE" || {
+        echo "Warning: failed to export policies from source DB."; 
+        POL_DDL_FILE=""
+      }
+      if [ -n "$POL_DDL_FILE" ] && [ -s "$POL_DDL_FILE" ]; then
+        echo "Applying policies to target..."
+        psql "$TARGET_DB_URL" -v ON_ERROR_STOP=1 -f "$POL_DDL_FILE" || {
+          echo "Warning: failed to apply policies to target DB."
+        }
+      else
+        echo "No policies exported; skipping apply."
+      fi
+    fi
+    rm -f "$POL_SQL_SRC"
+  fi
+fi
 
 echo "Done."
 
